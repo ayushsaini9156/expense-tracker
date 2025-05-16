@@ -13,11 +13,11 @@ exports.addIncome = async (req, res) => {
       return res.status(400).json({ message: "All fields are required" });
     }
 
-    const newIncome = new Income({ 
-      userId, 
-      icon, 
-      source, 
-      amount, 
+    const newIncome = new Income({
+      userId,
+      icon,
+      source,
+      amount,
       date: new Date(date)
     });
 
@@ -64,7 +64,7 @@ exports.downloadIncomeExcel = async (req, res) => {
       Amount: item.amount,
       Date: item.date,
     }));
-    
+
     const wb = xlsx.utils.book_new();
     const ws = xlsx.utils.json_to_sheet(data);
     xlsx.utils.book_append_sheet(wb, ws, "Income");
