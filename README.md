@@ -2,7 +2,7 @@
 
 A full-stack **MERN** application to manage daily incomes and expenses with an interactive dashboard, secure authentication, and persistent data storage.
 
-![Expense Tracker Screenshot](./screenshot.png)
+
 
 ---
 
