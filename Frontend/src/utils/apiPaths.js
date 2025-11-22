@@ -1,6 +1,6 @@
-
-
-export const BASE_URL = "https://expense-tracker-dcs7.onrender.com";
+// Use Vite environment variable when available for local development
+export const BASE_URL =
+  import.meta.env.VITE_BASE_URL || "https://expense-tracker-dcs7.onrender.com";
 
 export const API_PATHS = {
   AUTH: {

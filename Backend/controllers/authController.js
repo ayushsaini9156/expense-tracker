@@ -1,7 +1,7 @@
-const bcrypt = require("bcrypt");
+const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
-const nodemailer = require("nodemailer");
 const User = require("../models/User");
+const sendEmail = require("../util/email");
 
 // In-memory OTP store: { email: { otp: "123456", expiresAt: Date } }
 const otpStore = {};
@@ -11,15 +11,6 @@ const jwt = require("jsonwebtoken");
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: "1h" });
 };
-
-// Nodemailer transporter setup
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.EMAIL_USERNAME,
-    pass: process.env.EMAIL_PASSWORD,
-  },
-});
 
 // Register User
 exports.registerUser = async (req, res) => {
@@ -114,21 +105,19 @@ exports.sendOtp = async (req, res) => {
     const otp = crypto.randomInt(100000, 999999).toString();
     otpStore[email] = { otp, expiresAt: Date.now() + 10 * 60 * 1000 };
 
-    const mailOptions = {
-      from: process.env.EMAIL_USERNAME,
-      to: email,
-      subject: "Your OTP for Password Reset",
-      text: `Your OTP to reset password is ${otp}. It expires in 10 minutes.`,
-    };
+    const subject = "Your OTP for Password Reset";
+    const text = `Your OTP to reset password is ${otp}. It expires in 10 minutes.`;
 
-    await transporter.sendMail(mailOptions);
-
+    await sendEmail(email, subject, text);
     res.status(200).json({ message: "OTP sent successfully to your email." });
   } catch (error) {
     console.error("sendOtp error:", error);
-    res
-      .status(500)
-      .json({ message: "Something went wrong. Please try again." });
+    const devMsg = `Failed to send OTP: ${error.message}`;
+    const prodMsg =
+      "Failed to send OTP. Please check email configuration and try again.";
+    res.status(500).json({
+      message: process.env.NODE_ENV === "production" ? prodMsg : devMsg,
+    });
   }
 };
 
@@ -172,9 +161,8 @@ exports.verifyOtpAndResetPassword = async (req, res) => {
         .json({ message: "New password must be different from old password" });
     }
 
-    // Hash new password and update user
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-    user.password = hashedPassword;
+    // Update user password (User model pre-save hook will hash it)
+    user.password = newPassword;
 
     // Clear OTP from store
     delete otpStore[email];
