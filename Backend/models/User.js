@@ -7,6 +7,14 @@ const userSchema = new mongoose.Schema(
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     profileImageUrl: { type: String, default: null },
+    // SaaS / subscription fields
+    role: { type: String, enum: ["user", "admin"], default: "user" },
+    isPremium: { type: Boolean, default: false },
+    premiumExpiresAt: { type: Date, default: null },
+
+    // Razorpay identifiers (if using Razorpay instead of Stripe)
+    razorpayCustomerId: { type: String, default: null },
+    razorpaySubscriptionId: { type: String, default: null },
   },
   { timestamps: true }
 );
