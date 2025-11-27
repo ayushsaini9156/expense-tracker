@@ -2,10 +2,21 @@ const Razorpay = require("razorpay");
 const crypto = require("crypto");
 const User = require("../models/User");
 
-const razorpayInstance = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET,
-});
+// Lazy-load Razorpay instance to avoid startup crash if keys missing
+let razorpayInstance = null;
+const getRazorpayInstance = () => {
+  if (!razorpayInstance) {
+    const keyId = process.env.RAZORPAY_KEY_ID;
+    const keySecret = process.env.RAZORPAY_KEY_SECRET;
+    if (!keyId || !keySecret) {
+      throw new Error(
+        "Razorpay keys not configured. Set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in .env"
+      );
+    }
+    razorpayInstance = new Razorpay({ key_id: keyId, key_secret: keySecret });
+  }
+  return razorpayInstance;
+};
 
 // Create a Razorpay subscription for a plan
 exports.createCheckoutSession = async (req, res, next) => {
@@ -17,10 +28,12 @@ exports.createCheckoutSession = async (req, res, next) => {
     if (!planId)
       return res.status(500).json({ message: "Pricing not configured" });
 
+    const razorpay = getRazorpayInstance();
+
     // Ensure customer exists in Razorpay
     let customerId = user.razorpayCustomerId;
     if (!customerId) {
-      const customer = await razorpayInstance.customers.create({
+      const customer = await razorpay.customers.create({
         name: user.fullName,
         email: user.email,
       });
@@ -30,7 +43,7 @@ exports.createCheckoutSession = async (req, res, next) => {
     }
 
     // Create subscription
-    const subscription = await razorpayInstance.subscriptions.create({
+    const subscription = await razorpay.subscriptions.create({
       plan_id: planId,
       customer_notify: 1,
       // optionally override total_count or addons
